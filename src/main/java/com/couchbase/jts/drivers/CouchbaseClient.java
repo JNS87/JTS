@@ -123,8 +123,7 @@ public class  CouchbaseClient extends Client{
 				// Adding the code for a single non-default scope and non-default collection
 				collection = bucket.scope("scope1").collection("collection1");
 			}
-
-
+			 
 		}catch(Exception ex) {
             throw new Exception("Could not connect to Couchbase Bucket.", ex);
         }
@@ -223,8 +222,9 @@ public String queryDebug() {
 }
 
 public void query() {
-	cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
+	cluster.searchQuery(indexName,SearchQuery.term("a").field("text"),SearchOptions.searchOptions().limit(limit)).toString();
 }
+
 public Boolean queryAndSuccess() {
 		cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
 		return true;
