@@ -121,8 +121,8 @@ public class  CouchbaseClient extends Client{
 				collection = bucket.defaultCollection();
 			}else {
 				// Adding the code for a single non-default scope and non-default collection
-				// need to create a function to randomize the mutations over the collections 
-				collection = bucket.scope("scope1").collection("collection0");
+				// need to create a function to randomize the mutations over the collections
+				collection = bucket.scope("scope1").collection("collections0");
 			}
 
 		}catch(Exception ex) {
