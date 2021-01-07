@@ -121,9 +121,10 @@ public class  CouchbaseClient extends Client{
 				collection = bucket.defaultCollection();
 			}else {
 				// Adding the code for a single non-default scope and non-default collection
-				collection = bucket.scope("scope1").collection("collection1");
+				// need to create a function to randomize the mutations over the collections 
+				collection = bucket.scope("scope1").collection("collection0");
 			}
-			 
+
 		}catch(Exception ex) {
             throw new Exception("Could not connect to Couchbase Bucket.", ex);
         }
