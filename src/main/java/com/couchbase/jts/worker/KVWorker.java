@@ -30,7 +30,7 @@ public class KVWorker extends Worker {
             clientDB.mutateRandomDoc();
             long en = System.nanoTime();
             long latency =  (en - st) / 1000000;
-            if (throughputGoal > 0) {
+            if (throughputGoal >= 0) {
                 float expectedDelayMC = (totalWorkers / (float) throughputGoal) * 1000;
                 if (expectedDelayMC > latency) {
                     long delayMS = (long) expectedDelayMC - latency;
@@ -48,5 +48,3 @@ public class KVWorker extends Worker {
     }
 
 }
-
-

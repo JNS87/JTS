@@ -26,7 +26,7 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.core.env.TimeoutConfig;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.json.JsonObject;
 
 // Imports of the other dependent services
 import com.couchbase.client.java.kv.*;
@@ -35,6 +35,8 @@ import com.couchbase.client.java.query.*;
 // Search related imports
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.result.SearchMetrics;
+import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.queries.TermQuery;
 
@@ -72,7 +74,6 @@ public class  CouchbaseClient extends Client{
 	// Setting the searchQuery Options
 	int limit = Integer.parseInt(settings.get(TestProperties.TESTSPEC_QUERY_LIMIT));
 	String indexName = settings.get(TestProperties.CBSPEC_INDEX_NAME);
-	SearchOptions opt = new SearchOptions().limit(limit);
 
 
 	private Cluster cluster;
@@ -84,14 +85,14 @@ public class  CouchbaseClient extends Client{
 	private int totalQueries = 0;
 	private SearchQuery queryToRun;
 
-
 	public CouchbaseClient(TestProperties workload) throws Exception{
         super(workload);
-        connect();
-        generateQueries();
-
+				connect();
+				generateQueries();
     }
-	private void connect() throws Exception{
+
+
+		private void connect() throws Exception{
 
 		try {
 
@@ -102,12 +103,9 @@ public class  CouchbaseClient extends Client{
 							.builder()
 							.timeoutConfig(TimeoutConfig.kvTimeout(Duration.ofMillis(kvTimeout)))
 							.ioConfig(IoConfig.enableMutationTokens(enableMutationToken).numKvConnections(kvEndpoints))
-				            .build();
-
+				      .build();
 				}
 			}
-
-
 			clusterOptions = ClusterOptions.clusterOptions(getProp(TestProperties.CBSPEC_USER),getProp(TestProperties.CBSPEC_PASSWORD));
 			clusterOptions.environment(env);
 
@@ -132,109 +130,113 @@ public class  CouchbaseClient extends Client{
         }
 	}
 
+		private void generateQueries() throws Exception {
+	String[][] terms = importTerms();
+	List <SearchQuery> queryList = null;
 
-	private void generateQueries() throws Exception {
-		String[][] terms = importTerms();
-		List <SearchQuery> queryList = null;
-
-        String fieldName = settings.get(TestProperties.TESTSPEC_QUERY_FIELD);
-		queryList = generateTermQueries(terms,fieldName);
-		if((queryList ==null) || (queryList.size()==0)) {
-			throw new Exception("Query list is empty! ");
-		}
-		queries = queryList.stream().toArray(SearchQuery[]::new);
-		totalQueries = queries.length;
-
+			String fieldName = settings.get(TestProperties.TESTSPEC_QUERY_FIELD);
+	queryList = generateTermQueries(terms,fieldName);
+	if((queryList ==null) || (queryList.size()==0)) {
+		throw new Exception("Query list is empty! ");
 	}
+	queries = queryList.stream().toArray(SearchQuery[]::new);
+	totalQueries = queries.length;
 
-	private List<SearchQuery> generateTermQueries(String[][] terms,  String fieldName)
-		throws IllegalArgumentException{
-		List<SearchQuery> queryList = new ArrayList<>();
-		int size = terms.length;
+}
 
-		for (int i = 0; i<size; i++) {
-			int lineSize = terms[i].length;
-			if(lineSize > 0) {
-				try {
-					SearchQuery query = buildQuery(terms[i], fieldName);
-					queryList.add(query);
-				}catch(IndexOutOfBoundsException ex) {
-					continue;
-				}
+private List<SearchQuery> generateTermQueries(String[][] terms,  String fieldName)
+	throws IllegalArgumentException{
+	List<SearchQuery> queryList = new ArrayList<>();
+	int size = terms.length;
+
+	for (int i = 0; i<size; i++) {
+		int lineSize = terms[i].length;
+		if(lineSize > 0) {
+			try {
+				SearchQuery query = buildQuery(terms[i], fieldName);
+				queryList.add(query);
+			}catch(IndexOutOfBoundsException ex) {
+				continue;
 			}
 		}
-		return queryList ;
-
 	}
+	return queryList ;
 
-	//Query builders
-	private SearchQuery buildQuery(String[] terms, String fieldName)
-		throws IllegalArgumentException, IndexOutOfBoundsException {
+}
 
-		switch (settings.get(settings.TESTSPEC_QUERY_TYPE)) {
-	    	case TestProperties.CONSTANT_QUERY_TYPE_TERM:
-	    		return buildTermQuery(terms,fieldName);
+//Query builders
+private SearchQuery buildQuery(String[] terms, String fieldName)
+	throws IllegalArgumentException, IndexOutOfBoundsException {
+
+	switch (settings.get(settings.TESTSPEC_QUERY_TYPE)) {
+			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
+				return buildTermQuery(terms,fieldName);
+	}
+	throw new IllegalArgumentException("Couchbase query builder: unexpected query type - "
+									+ settings.get(settings.TESTSPEC_QUERY_TYPE));
+}
+
+private SearchQuery buildTermQuery(String[] terms, String fieldName) {
+	return SearchQuery.term(terms[0]).field(fieldName);
+}
+
+public float queryAndLatency() {
+	long st = System.nanoTime();
+	queryToRun = queries[rand.nextInt(totalQueries)];
+	SearchOptions opt = SearchOptions.searchOptions().limit(limit);
+	SearchResult res = cluster.searchQuery(indexName,queryToRun,opt);
+	logWriter.logMessage(res.toString());
+	long en = System.nanoTime();
+	float latency = (float) (en - st) / 1000000;
+	int res_size = res.rows().size();
+	SearchMetrics metrics = res.metaData().metrics();
+	if (res_size > 0 && metrics.maxScore()!= 0 && metrics.totalRows()!= 0){ return latency;}
+	return 0;
+}
+
+
+public void mutateRandomDoc() {
+	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
+	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
+	String docIdHex = Long.toHexString(docIdLong);
+	String originFieldName = settings.get(TestProperties.TESTSPEC_QUERY_FIELD);
+	String replaceFieldName = settings.get(TestProperties.TESTSPEC_MUTATION_FIELD);
+
+	// Getting the document content
+	GetResult doc = collection.get(docIdHex);
+	// converting that to a JSON object
+	JsonObject mutate_doc = doc.contentAsObject();
+	// To get the values we are changing
+	Object origin = doc.contentAsObject().getString(originFieldName);
+	Object replace = doc.contentAsObject().getString(replaceFieldName);
+	// mutating this by interchanging
+	mutate_doc.put(originFieldName, replace);
+	mutate_doc.put(replaceFieldName, origin);
+	// pushing the document
+	collection.upsert(docIdHex, mutate_doc);
+
+
+}
+
+public String queryDebug() {
+	return cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
+}
+
+public void query() {
+	cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
+}
+public Boolean queryAndSuccess() {
+		cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
+		return true;
+}
+
+
+ private String getProp(String name) {
+				return settings.get(name);
+		}
+ private void fileError(String err) {
+				System.out.println(err);
 		}
 
-
-	}
-
-	private SearchQuery buildTermQuery(String[] terms, String fieldName) {
-		return new TermQuery(terms[0]).term​(fieldName);
-	}
-
-	public float queryAndLatency() {
-		 long st = System.nanotime();
-		 SearchResult res = null;
-		 queryToRun = queries[rand.nextInt(totalQueries)];
-		 res = cluster.searchQuery​(indexName,queryToRun,opt);
-	}
-
-	public void mutateRandomDoc() {
-		long totalDocs = Long.parseLong(getWorkload().get(TestProperties.TESTSPEC_TOTAL_DOCS));
-		long docIdLong = Math.abs(rand.nextLong() % totalDocs);
-		String docIdHex = Long.toHexString(docIdLong);
-		String originFieldName = getWorkLoad().get(TestProperties.TESTSPEC_QUERY_FIELD);
-		String replaceFieldName = getWorkload().get(TestProperties.TESTSPEC_MUTATION_FIELD);
-
-		// Getting the document content
-		GetResult doc = collection.get(docIdHex);
-		// converting that to a JSON object
-		JsonObject mutate_doc = doc.contentAsObject();
-		// To get the values we are changing
-		Object origin = doc.contentAsObject().getString(originFieldName);
-        Object replace = doc.contentAsObject().getString(replaceFieldName);
-        // mutating this by interchanging
-        mutate_doc.put(originFieldName, replace);
-        mutate_doc.put(replaceFieldName, origin);
-        // pushing the document
-
-        collection.upsert(docIdHex, mutate_doc);
-
-
-	}
-
-	public TestProperties getWorkload() {
-        return settings;
-    }
-
-	public String queryDebug() {
-		return cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],opt).toString();
-	}
-
-	public void query() {
-		cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],opt).toString();
-	}
-	public Boolean queryAndSuccess() {
-		 return cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],opt).status().isSuccess();
-	}
-
-
-	 private String getProp(String name) {
-	        return getWorkload().get(name);
-	    }
-	 private void fileError(String err) {
-	        System.out.println(err);
-	    }
 
 }
