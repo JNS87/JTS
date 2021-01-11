@@ -30,8 +30,10 @@ public class KVWorker extends Worker {
             clientDB.mutateRandomDoc();
             long en = System.nanoTime();
             long latency =  (en - st) / 1000000;
+            logWriter.logMessage("In the runAction() of KVWorker , latency : " +latency);
             if (throughputGoal >= 0) {
                 float expectedDelayMC = (totalWorkers / (float) throughputGoal) * 1000;
+                logWriter.logMessage("In the runAction() of KVWorker , expectedDelayMC : " +expectedDelayMC);
                 if (expectedDelayMC > latency) {
                     long delayMS = (long) expectedDelayMC - latency;
                     TimeUnit.MILLISECONDS.sleep(delayMS);
