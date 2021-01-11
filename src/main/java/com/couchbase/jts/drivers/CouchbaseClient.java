@@ -1,5 +1,7 @@
 package com.couchbase.jts.drivers;
-
+/*
+Created by JNS87
+*/
 // Imports of general utilities / java library
 
 import java.util.Random;
@@ -27,6 +29,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
 
 // Imports of the other dependent services
 import com.couchbase.client.java.kv.*;
@@ -38,12 +41,10 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchMetrics;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.SearchOptions;
-import com.couchbase.client.java.search.queries.TermQuery;
+import com.couchbase.client.java.search.queries.*;
 
-
-
-
-//import com.couchbase.client.core.metrics.LatencyMetricsCollectorConfig;
+// Flex Query related imports
+import com.couchbase.client.java.query.QueryResult;
 
 
 
@@ -79,11 +80,18 @@ public class  CouchbaseClient extends Client{
 	private Cluster cluster;
 	private volatile ClusterOptions clusterOptions;
 	private Bucket bucket;
-	private SearchQuery[] queries;
 
-	private Random rand = new Random();
+	//Search Query variables
+	private SearchQuery[] FTSQueries;
 	private int totalQueries = 0;
 	private SearchQuery queryToRun;
+
+	//Flex Query variables
+	private String[] FlexQueries;
+	private int FlexTotalQueries = 0;
+	private N1QL
+
+	private Random rand = new Random();
 
 	public CouchbaseClient(TestProperties workload) throws Exception{
         super(workload);
@@ -139,8 +147,8 @@ public class  CouchbaseClient extends Client{
 	if((queryList ==null) || (queryList.size()==0)) {
 		throw new Exception("Query list is empty! ");
 	}
-	queries = queryList.stream().toArray(SearchQuery[]::new);
-	totalQueries = queries.length;
+	FTSQueries = queryList.stream().toArray(SearchQuery[]::new);
+	totalQueries = FTSQueries.length;
 
 }
 
@@ -182,7 +190,7 @@ private SearchQuery buildTermQuery(String[] terms, String fieldName) {
 
 public float queryAndLatency() {
 	long st = System.nanoTime();
-	queryToRun = queries[rand.nextInt(totalQueries)];
+	queryToRun = FTSQueries[rand.nextInt(totalQueries)];
 	SearchOptions opt = SearchOptions.searchOptions().limit(limit);
 	SearchResult res = cluster.searchQuery(indexName,queryToRun,opt);
 	logWriter.logMessage(res.toString());
@@ -196,6 +204,9 @@ public float queryAndLatency() {
 
 
 public void mutateRandomDoc() {
+	try{
+
+	}
 	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
 	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
 	String docIdHex = Long.toHexString(docIdLong);
@@ -206,6 +217,7 @@ public void mutateRandomDoc() {
 	GetResult doc = collection.get(docIdHex);
 	// converting that to a JSON object
 	JsonObject mutate_doc = doc.contentAsObject();
+	logWriter.logMessage("this is the doc : " + mutate_doc);
 	// To get the values we are changing
 	Object origin = doc.contentAsObject().getString(originFieldName);
 	Object replace = doc.contentAsObject().getString(replaceFieldName);
@@ -213,21 +225,22 @@ public void mutateRandomDoc() {
 	mutate_doc.put(originFieldName, replace);
 	mutate_doc.put(replaceFieldName, origin);
 	// pushing the document
-	collection.upsert(docIdHex, mutate_doc);
+	MutationResult mut_res =  collection.upsert(docIdHex, mutate_doc);
+	logWriter.logMessage("this is the doc : " + mut_res.toString());
 
 
 }
 
 public String queryDebug() {
-	return cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
+	return cluster.searchQuery(indexName,FTSQueries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
 }
 
 public void query() {
-	cluster.searchQuery(indexName,SearchQuery.term("a").field("text"),SearchOptions.searchOptions().limit(limit)).toString();
+	cluster.searchQuery(indexName,FTSQueries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit)).toString();
 }
 
 public Boolean queryAndSuccess() {
-		cluster.searchQuery(indexName,queries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
+		cluster.searchQuery(indexName,FTSQueries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
 		return true;
 }
 
