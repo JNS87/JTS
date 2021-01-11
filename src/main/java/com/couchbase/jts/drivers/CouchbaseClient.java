@@ -89,7 +89,6 @@ public class  CouchbaseClient extends Client{
 	//Flex Query variables
 	private String[] FlexQueries;
 	private int FlexTotalQueries = 0;
-	private N1QL
 
 	private Random rand = new Random();
 
@@ -204,9 +203,6 @@ public float queryAndLatency() {
 
 
 public void mutateRandomDoc() {
-	try{
-
-	}
 	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
 	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
 	String docIdHex = Long.toHexString(docIdLong);
