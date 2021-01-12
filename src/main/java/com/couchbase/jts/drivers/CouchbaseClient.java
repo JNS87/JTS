@@ -130,6 +130,7 @@ public class  CouchbaseClient extends Client{
 				// Adding the code for a single non-default scope and non-default collection
 				// need to create a function to randomize the mutations over the collections
 				collection = bucket.scope("scope1").collection("collections0");
+				logWriter.logMessage("in the other part of the collections parameter");
 			}
 
 		}catch(Exception ex) {
@@ -203,14 +204,22 @@ public float queryAndLatency() {
 
 
 public void mutateRandomDoc() {
+	logWriter.logMessage("In Mutate() ");
 	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
 	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
-	String docIdHex = Long.toHexString(docIdLong);
+	String docIdHex;
+	if(collectionIndicator == 0){
+		docIdHex =  Long.toHexString(docIdLong);
+	}else{
+		docIdHex = String.valueOf(docIdLong);
+	}
 	String originFieldName = settings.get(TestProperties.TESTSPEC_QUERY_FIELD);
 	String replaceFieldName = settings.get(TestProperties.TESTSPEC_MUTATION_FIELD);
-
+	logWriter.logMessage("the id of the doc"+String.valueOf(docIdHex)+" , "+ String.valueOf(docIdLong) );
 	// Getting the document content
 	GetResult doc = collection.get(docIdHex);
+	logWriter.logMessage("this is the result of a get: "+ doc.toString());
+	logWriter.logMessage("after the get");
 	// converting that to a JSON object
 	JsonObject mutate_doc = doc.contentAsObject();
 	logWriter.logMessage("this is the doc : " + mutate_doc);
@@ -221,7 +230,7 @@ public void mutateRandomDoc() {
 	mutate_doc.put(originFieldName, replace);
 	mutate_doc.put(replaceFieldName, origin);
 	// pushing the document
-	MutationResult mut_res =  collection.upsert(docIdHex, mutate_doc);
+	MutationResult mut_res =  collection.upsert(String.valueOf(docIdLong), mutate_doc);
 	logWriter.logMessage("this is the doc : " + mut_res.toString());
 
 
