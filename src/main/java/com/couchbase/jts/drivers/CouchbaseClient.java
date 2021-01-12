@@ -215,14 +215,10 @@ public void mutateRandomDoc() {
 	}
 	String originFieldName = settings.get(TestProperties.TESTSPEC_QUERY_FIELD);
 	String replaceFieldName = settings.get(TestProperties.TESTSPEC_MUTATION_FIELD);
-	logWriter.logMessage("the id of the doc"+String.valueOf(docIdHex)+" , "+ String.valueOf(docIdLong) );
 	// Getting the document content
 	GetResult doc = collection.get(docIdHex);
-	logWriter.logMessage("this is the result of a get: "+ doc.toString());
-	logWriter.logMessage("after the get");
 	// converting that to a JSON object
 	JsonObject mutate_doc = doc.contentAsObject();
-	logWriter.logMessage("this is the doc : " + mutate_doc);
 	// To get the values we are changing
 	Object origin = doc.contentAsObject().getString(originFieldName);
 	Object replace = doc.contentAsObject().getString(replaceFieldName);
@@ -230,8 +226,7 @@ public void mutateRandomDoc() {
 	mutate_doc.put(originFieldName, replace);
 	mutate_doc.put(replaceFieldName, origin);
 	// pushing the document
-	MutationResult mut_res =  collection.upsert(String.valueOf(docIdLong), mutate_doc);
-	logWriter.logMessage("this is the doc : " + mut_res.toString());
+	MutationResult mut_res =  collection.upsert(docIdHex, mutate_doc);
 
 
 }
