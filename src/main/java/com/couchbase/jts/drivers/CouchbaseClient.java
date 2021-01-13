@@ -259,8 +259,11 @@ public void query() {
 }
 
 public Boolean queryAndSuccess() {
-		cluster.searchQuery(indexName,FTSQueries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
-		return true;
+		SearchResult res = cluster.searchQuery(indexName,FTSQueries[rand.nextInt(totalQueries)],SearchOptions.searchOptions().limit(limit));
+		int res_size = res.rows().size();
+		SearchMetrics metrics = res.metaData().metrics();
+		if (res_size > 0 && metrics.maxScore()!= 0 && metrics.totalRows()!= 0){ return true;}
+		return false;
 }
 
 
