@@ -72,6 +72,10 @@ public class  CouchbaseClient extends Client{
 	// >1 N collections
 	private int collectionIndicator;
 
+	// for docs generated with custom doc gen (created by JNS87)
+	// the ids of the docs are of type String.valueOf(long ID) , not its hex equivalent
+	private int UseDocIdLong = Integer.parseInt(settings.get(TestProperties.TESTSPEC_DOCID_LONG));
+
 	// Setting the searchQuery Options
 	int limit = Integer.parseInt(settings.get(TestProperties.TESTSPEC_QUERY_LIMIT));
 	String indexName = settings.get(TestProperties.CBSPEC_INDEX_NAME);
@@ -129,7 +133,7 @@ public class  CouchbaseClient extends Client{
 			}else {
 				// Adding the code for a single non-default scope and non-default collection
 				// need to create a function to randomize the mutations over the collections
-				collection = bucket.scope("scope1").collection("collections0");
+				collection = bucket.scope("scope-1").collection("collection-1");
 				logWriter.logMessage("in the other part of the collections parameter");
 			}
 
@@ -179,6 +183,13 @@ private SearchQuery buildQuery(String[] terms, String fieldName)
 	switch (settings.get(settings.TESTSPEC_QUERY_TYPE)) {
 			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
 				return buildTermQuery(terms,fieldName);
+			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
+				return buildTermQuery(terms,fieldName);
+			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
+				return buildTermQuery(terms,fieldName);
+			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
+				return buildTermQuery(terms,fieldName);
+
 	}
 	throw new IllegalArgumentException("Couchbase query builder: unexpected query type - "
 									+ settings.get(settings.TESTSPEC_QUERY_TYPE));
@@ -208,7 +219,7 @@ public void mutateRandomDoc() {
 	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
 	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
 	String docIdHex;
-	if(collectionIndicator == 0){
+	if(UseDocIdLong == 0){
 		docIdHex =  Long.toHexString(docIdLong);
 	}else{
 		docIdHex = String.valueOf(docIdLong);
