@@ -223,10 +223,11 @@ public float queryAndLatency() {
 
 
 public void mutateRandomDoc() {
-	logWriter.logMessage("In Mutate() ");
+	logWriter.logMessage("In Mutate()");
 	long totalDocs = Long.parseLong(settings.get(TestProperties.TESTSPEC_TOTAL_DOCS));
 	long docIdLong = Math.abs(rand.nextLong() % totalDocs);
 	String docIdHex;
+	logWriter.logMessage("value of flag in mutate"+UseDocIdLong);
 	if(UseDocIdLong == 0){
 		docIdHex =  Long.toHexString(docIdLong);
 	}else{
