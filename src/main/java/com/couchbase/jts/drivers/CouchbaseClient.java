@@ -41,8 +41,9 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchMetrics;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.SearchOptions;
-import com.couchbase.client.java.search.queries.*;
-
+import com.couchbase.client.java.search.queries.TermQuery;
+import com.couchbase.client.java.search.queries.ConjunctionQuery;
+import com.couchbase.client.java.search.queries.DisjunctionQuery;
 // Flex Query related imports
 import com.couchbase.client.java.query.QueryResult;
 
@@ -181,15 +182,12 @@ private SearchQuery buildQuery(String[] terms, String fieldName)
 	throws IllegalArgumentException, IndexOutOfBoundsException {
 
 	switch (settings.get(settings.TESTSPEC_QUERY_TYPE)) {
-			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
+		 case TestProperties.CONSTANT_QUERY_TYPE_TERM:
 				return buildTermQuery(terms,fieldName);
-			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
-				return buildTermQuery(terms,fieldName);
-			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
-				return buildTermQuery(terms,fieldName);
-			case TestProperties.CONSTANT_QUERY_TYPE_TERM:
-				return buildTermQuery(terms,fieldName);
-
+		 case TestProperties.CONSTANT_QUERY_TYPE_AND:
+				return buildAndQuery(terms,fieldName);
+		 case TestProperties.CONSTANT_QUERY_TYPE_OR:
+				return buildOrQuery(terms,fieldName);
 	}
 	throw new IllegalArgumentException("Couchbase query builder: unexpected query type - "
 									+ settings.get(settings.TESTSPEC_QUERY_TYPE));
@@ -197,6 +195,16 @@ private SearchQuery buildQuery(String[] terms, String fieldName)
 
 private SearchQuery buildTermQuery(String[] terms, String fieldName) {
 	return SearchQuery.term(terms[0]).field(fieldName);
+}
+private SearchQuery buildAndQuery(String[] terms, String fieldName) {
+	TermQuery lt = SearchQuery.term(terms[0]).field(fieldName);
+	TermQuery rt = SearchQuery.term(terms[1]).field(fieldName);
+	return SearchQuery.conjuncts(lt,rt);
+}
+private SearchQuery buildOrQuery(String[] terms, String fieldName) {
+	TermQuery lt = SearchQuery.term(terms[0]).field(fieldName);
+	TermQuery rt = SearchQuery.term(terms[1]).field(fieldName);
+	return SearchQuery.disjuncts(lt,rt);
 }
 
 public float queryAndLatency() {
